@@ -1,11 +1,46 @@
 const express = require('express')
 const morgan = require('morgan')
 
+const multer = require('multer');
+
+// const upload = multer({ "dest": `${__dirname}/uploads`})
+
+const imageTypes = {
+  'image/jpeg': 'jpg',
+  'image/png': 'png'
+};
+
+const upload = multer({
+  storage: multer.diskStorage({
+    filename: (req, file, callback) => {
+      const filename = crypto.pseudoRandomBytes(16).toString('hex');
+      const extension = imageTypes[file.mimetype];
+      callback(null, `${filename}.${extension}`);
+    }
+  }),
+
+  fileFilter: (req, file, callback) => {
+    callback(null, !!imageTypes[file.mimetype]);
+  }
+});
+
 const api = require('./api')
 const { connectToDb } = require('./lib/mongo')
 
 const app = express()
 const port = process.env.PORT || 8000
+
+apipp.get('/images/:id', (req, res, next) => {
+  console.log(req.params.id);
+  const path = `${__dirname}/uploads/${req.params.id}`;
+  res.setHeader("Content-Type", "image/jpeg").sendFile(path);
+});
+
+app.post('/images', upload.single('image'), (req, res, next) => {
+  console.log("req.body = " + JSON.stringify(req.body, null, 4));
+  console.log("req.body = " + JSON.stringify(req.file, null, 4));
+  res.send({"status": "ok", "id": req.file.filename});
+});
 
 /*
  * Morgan is a popular logger.
