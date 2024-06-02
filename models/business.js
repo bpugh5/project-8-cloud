@@ -66,7 +66,7 @@ async function insertNewBusiness(business) {
   business = extractValidFields(business, BusinessSchema)
   const db = getDbReference()
   const collection = db.collection('businesses')
-  const result = await collection.insertOne(business)
+  const result = await collection.insertOne(business._id)
   return result.insertedId
 }
 exports.insertNewBusiness = insertNewBusiness
@@ -84,16 +84,20 @@ async function getBusinessById(id) {
   if (!ObjectId.isValid(id)) {
     return null
   } else {
-    const results = await collection.aggregate([
-      { $match: { _id: new ObjectId(id) } },
-      { $lookup: {
-          from: "photos",
-          localField: "_id",
-          foreignField: "businessId",
-          as: "photos"
-      }}
-    ]).toArray()
-    return results[0]
+    // router.get('/images/:id', (req, res, next) => {
+      //   console.log(req.params.id);
+        const path = `${__dirname}/uploads/${business.businessId}`;
+        res.setHeader("Content-Type", "image/jpeg").sendFile(path);
+    // const results = await collection.aggregate([
+    //   { $match: { _id: new ObjectId(id) } },
+    //   { $lookup: {
+    //       from: "photos",
+    //       localField: "_id",
+    //       foreignField: "businessId",
+    //       as: "photos"
+    //   }}
+    // ]).toArray()
+    // return results[0]
   }
 }
 exports.getBusinessById = getBusinessById
