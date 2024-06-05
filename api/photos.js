@@ -26,6 +26,12 @@ function getImageDownloadStreamByFilename(filename) {
   return bucket.openDownloadStreamByName(filename)
 }
 
+function getThumbDownloadStreamByFilename(filename) {
+  const db = getDbReference();
+  const bucket = new GridFSBucket(db, { bucketName: 'thumbs' });
+  return bucket.openDownloadStreamByName(filename);
+}
+
 function removeUploadedFile(file) {
   return new Promise((resolve, reject) => {
     fs.unlink(file.path, (err) => {
@@ -97,7 +103,7 @@ const upload = multer({
 router.post('/', upload.single('image'), async (req, res) => {
   if (validateAgainstSchema(req.body, PhotoSchema)) {
     try {
-      const id = await saveImageFile(req, res)
+      const id = await saveImageFile(req, res);
       await removeUploadedFile(req.file);
       const channel = await getChannel();
       await channel.assertQueue('images');
@@ -150,6 +156,20 @@ router.get('/:id', async (req, res, next) => {
 
 router.get('/media/images/:filename', (req, res, next) => {
   getImageDownloadStreamByFilename(req.params.filename)
+  .on('file', (file) => {
+    res.status(200).type(file.metadata.contentType);
+  })
+  .on('error', (err) => {
+    if (err.code === 'ENOENT') {
+      next();
+    } else {
+      next(err);
+    }
+  }).pipe(res);
+});
+
+router.get('/media/thumbs/:filename', (req, res, next) => {
+  getThumbDownloadStreamByFilename(req.params.filename)
   .on('file', (file) => {
     res.status(200).type(file.metadata.contentType);
   })

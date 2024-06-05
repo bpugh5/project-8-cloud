@@ -41,14 +41,14 @@ async function updateImageSizeById(id, imageData) {
     `${id}.jpg`,
     { metadata: metadata }
   );
-  uploadStream.write(imageBuffer);
+  uploadStream.end(imageBuffer);
 }
 
 async function mainConsumer() {
   try {
     const channel = await getChannel();
     await channel.assertQueue('images');
-      channel.consume('images', async (msg) =>  {
+      channel.consume('images', async (msg) => {
         if (msg) {
           const id = msg.content.toString();
           const downloadStream = await getDownloadStreamById(id);
