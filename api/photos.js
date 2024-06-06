@@ -20,9 +20,9 @@ const fs = require('fs');
 const { GridFSBucket } = require('mongodb');
 const { getDbReference } = require('../lib/mongo');
 
-function getImageDownloadStreamByFilename(filename) {
+function getPhotoDownloadStreamByFilename(filename) {
   const db = getDbReference();
-  const bucket = new GridFSBucket(db, {bucketName: 'images' });
+  const bucket = new GridFSBucket(db, {bucketName: 'photos' });
   return bucket.openDownloadStreamByName(filename)
 }
 
@@ -44,12 +44,12 @@ function removeUploadedFile(file) {
   });
 }
 
-function saveImageFile(req, res) {
+function savePhotoFile(req, res) {
   if (req.file && req.body && req.body.businessId) {
     try {
       return new Promise((resolve, reject) => {
         const db = getDbReference();
-        const bucket = new GridFSBucket(db, {bucketName: 'images'});
+        const bucket = new GridFSBucket(db, {bucketName: 'photos'});
         const metadata = {
           contentType: req.file.mimetype,
           businessId: req.body.businessId,
@@ -71,7 +71,7 @@ function saveImageFile(req, res) {
     }
   } else {
     res.status(400).send({
-      err: "Request body needs 'image' file and 'businessId'"
+      err: "Request body needs 'photo' file and 'businessId'"
     })
   }
 }
@@ -100,18 +100,18 @@ const upload = multer({
 /*
  * POST /photos - Route to create a new photo.
  */
-router.post('/', upload.single('image'), async (req, res) => {
+router.post('/', upload.single('photo'), async (req, res) => {
   if (validateAgainstSchema(req.body, PhotoSchema)) {
     try {
-      const id = await saveImageFile(req, res);
+      const id = await savePhotoFile(req, res);
       await removeUploadedFile(req.file);
       const channel = await getChannel();
-      await channel.assertQueue('images');
-      channel.sendToQueue('images', Buffer.from(id.toString()));
+      await channel.assertQueue('photos');
+      channel.sendToQueue('photos', Buffer.from(id.toString()));
       res.status(201).send({
         id: id,
         links: {
-          photo: `/photos/${id}`,
+          photo: `/${id}.${imageTypes[req.file.mimetype]}`,
           business: `/businesses/${req.body.businessId}`
         }
       })
@@ -137,10 +137,13 @@ router.get('/:id', async (req, res, next) => {
     if (photo) {
       const responseBody = {
         _id: photo._id,
-        url: `/media/images/${photo.filename}`,
-        contentType: photo.metadata.contentType,
         businessId: photo.metadata.businessId,
-        size: photo.metadata.size
+        contentType: photo.metadata.contentType,
+        caption: photo.caption,
+        thumbId: photo.id,
+        size: photo.metadata.size,
+        url: `/media/photos/${photo.filename}`,
+        thumbUrl: `/media/thumbs/${photo.filename}`
       };
       res.status(200).send(responseBody);
     } else {
@@ -149,13 +152,13 @@ router.get('/:id', async (req, res, next) => {
   } catch (err) {
     console.error(err)
     res.status(500).send({
-      error: "Unable to fetch photo.  Please try again later."
+      error: "Unable to fetch photo. Please try again later."
     })
   }
 })
 
-router.get('/media/images/:filename', (req, res, next) => {
-  getImageDownloadStreamByFilename(req.params.filename)
+router.get('/media/photos/:filename', (req, res, next) => {
+  getPhotoDownloadStreamByFilename(req.params.filename)
   .on('file', (file) => {
     res.status(200).type(file.metadata.contentType);
   })

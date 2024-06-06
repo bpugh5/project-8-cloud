@@ -17,7 +17,7 @@ app.use(morgan('dev'))
 app.use(express.json())
 app.use(express.static('public'))
 app.use(
-  '/media/images', 
+  '/media/photos', 
   express.static(`${__dirname}/uploads`)
 );
 

@@ -22,42 +22,44 @@ async function getChannel() {
 
 exports.getChannel = getChannel
 
-async function updateImageSizeById(id, imageData) {
-  const image = await Jimp.read(imageData).then((image) => {
-    return image.resize(100, 100);
+async function updatePhotoSizeById(id, imageData) {
+  const photo = await Jimp.read(imageData).then((photo) => {
+    return photo.resize(100, 100);
   });
 
-  const imageBuffer = await image.getBufferAsync(Jimp.MIME_JPEG);
+  const photoBuffer = await photo.getBufferAsync(Jimp.MIME_JPEG);
 
   const db = getDbReference();
 
   const bucket = new GridFSBucket(db, {bucketName: 'thumbs'});
   const metadata = {
     contentType: 'image/jpeg',
-    height: sizeOf(imageBuffer).height,
-    width: sizeOf(imageBuffer).width,
+    height: sizeOf(photoBuffer).height,
+    width: sizeOf(photoBuffer).width,
   };
+  const photoBucket = new GridFSBucket(db, {bucketName: 'photos' });
+  const returnedPhoto = await photoBucket.find({_id: ObjectId(id)}).toArray();
   const uploadStream = bucket.openUploadStream(
-    `${id}.jpg`,
+    returnedPhoto[0].filename,
     { metadata: metadata }
   );
-  uploadStream.end(imageBuffer);
+  uploadStream.end(photoBuffer);
 }
 
 async function mainConsumer() {
   try {
     const channel = await getChannel();
-    await channel.assertQueue('images');
-      channel.consume('images', async (msg) => {
+    await channel.assertQueue('photos');
+      channel.consume('photos', async (msg) => {
         if (msg) {
           const id = msg.content.toString();
           const downloadStream = await getDownloadStreamById(id);
-          const imageData = [];
+          const photosData = [];
           downloadStream.on('data', (data) => {
-            imageData.push(data);
+            photosData.push(data);
           });
           downloadStream.on('end', async () => {
-            const result = await updateImageSizeById(id, Buffer.concat(imageData));
+            const result = await updatePhotoSizeById(id, Buffer.concat(photosData));
           });
         }
         channel.ack(msg);
@@ -71,7 +73,7 @@ exports.mainConsumer = mainConsumer
 
 async function getDownloadStreamById(id) {
   const db = getDbReference();
-  const bucket = new GridFSBucket(db, {bucketName: 'images' });
+  const bucket = new GridFSBucket(db, {bucketName: 'photos' });
   const object = await bucket.find({_id: ObjectId(id)}).toArray();
   return bucket.openDownloadStreamByName(object[0].filename);
 }
@@ -107,7 +109,7 @@ exports.insertNewPhoto = insertNewPhoto
  */
 async function getPhotoById(id) {
   const db = getDbReference()
-  const bucket = new GridFSBucket(db, {bucketName: 'images' });
+  const bucket = new GridFSBucket(db, {bucketName: 'photos' });
   if (!ObjectId.isValid(id)) {
     return null
   } else {
