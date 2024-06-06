@@ -22,8 +22,8 @@ async function getChannel() {
 
 exports.getChannel = getChannel
 
-async function updatePhotoSizeById(id, imageData) {
-  const photo = await Jimp.read(imageData).then((photo) => {
+async function updatePhotoSizeById(id, photosData) {
+  const photo = await Jimp.read(photosData).then((photo) => {
     return photo.resize(100, 100);
   });
 
@@ -50,8 +50,9 @@ async function mainConsumer() {
   try {
     const channel = await getChannel();
     await channel.assertQueue('photos');
-      channel.consume('photos', async (msg) => {
+    channel.consume('photos', async (msg) => {
         if (msg) {
+
           const id = msg.content.toString();
           const downloadStream = await getDownloadStreamById(id);
           const photosData = [];
@@ -62,6 +63,7 @@ async function mainConsumer() {
             const result = await updatePhotoSizeById(id, Buffer.concat(photosData));
           });
         }
+
         channel.ack(msg);
       });
   } catch (err) {

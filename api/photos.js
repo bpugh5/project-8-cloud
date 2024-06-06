@@ -108,6 +108,7 @@ router.post('/', upload.single('photo'), async (req, res) => {
       const channel = await getChannel();
       await channel.assertQueue('photos');
       channel.sendToQueue('photos', Buffer.from(id.toString()));
+      setTimeout(() => { channel.close(); }, 500);
       res.status(201).send({
         id: id,
         links: {

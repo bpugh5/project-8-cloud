@@ -8,7 +8,6 @@ const { mainConsumer } = require('./models/photo');
 const app = express()
 const port = process.env.PORT || 8000
 
-
 /*
  * Morgan is a popular logger.
  */
