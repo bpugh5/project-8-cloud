@@ -47,7 +47,7 @@ async function updatePhotoSizeById(id, photosData) {
 }
 
 async function mainConsumer() {
-  try {
+  // try {
     const channel = await getChannel();
     await channel.assertQueue('photos');
     channel.consume('photos', async (msg) => {
@@ -66,9 +66,9 @@ async function mainConsumer() {
 
         channel.ack(msg);
       });
-  } catch (err) {
-    console.error(err);
-  }
+  // } catch (err) {
+    // console.error(err);
+  // }
 }
 
 exports.mainConsumer = mainConsumer
